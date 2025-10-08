@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 interface ClusterFile {
   name: string;
-  data: any[];
+  data: Record<string, unknown>[];
   headers: string[];
   columnsToAdd: string[];
   clusterMatchField: string;
@@ -24,7 +24,7 @@ interface ClusterFile {
 
 interface ProcessedCluster {
   name: string;
-  data: any[];
+  data: Record<string, unknown>[];
   columnSummaries: Record<string, Record<string, number>>;
   addedColumns: string[];
   clusterMatchField: string;
@@ -33,7 +33,7 @@ interface ProcessedCluster {
 }
 
 export default function ClusterMatcher() {
-  const [topologyData, setTopologyData] = useState<any[]>([]);
+  const [topologyData, setTopologyData] = useState<Record<string, unknown>[]>([]);
   const [topologyColumns, setTopologyColumns] = useState<string[]>([]);
   const [clusterFiles, setClusterFiles] = useState<ClusterFile[]>([]);
   const [processedClusters, setProcessedClusters] = useState<ProcessedCluster[]>([]);
@@ -57,14 +57,15 @@ export default function ClusterMatcher() {
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
       
       if (jsonData.length > 0) {
-        const columns = Object.keys(jsonData[0] as Record<string, any>);
+        const columns = Object.keys(jsonData[0] as Record<string, unknown>);
         setTopologyColumns(columns);
-        setTopologyData(jsonData);
+        setTopologyData(jsonData as Record<string, unknown>[]);
         setStatus(`✓ Loaded ${jsonData.length} records from topology tracker`);
         toast.success(`Topology tracker loaded: ${jsonData.length} records`);
       }
-    } catch (err: any) {
-      setError(`Error loading topology file: ${err.message}`);
+    } catch (err) {
+      const error = err as Error;
+      setError(`Error loading topology file: ${error.message}`);
       toast.error('Failed to load topology tracker');
     }
   };
@@ -90,7 +91,7 @@ export default function ClusterMatcher() {
             complete: (results) => {
               loadedFiles.push({
                 name: file.name,
-                data: results.data,
+                data: results.data as Record<string, unknown>[],
                 headers: results.meta.fields || [],
                 columnsToAdd: [],
                 clusterMatchField: '',
@@ -105,15 +106,16 @@ export default function ClusterMatcher() {
       setClusterFiles(loadedFiles);
       setStatus(`✓ Loaded ${loadedFiles.length} cluster file(s)`);
       toast.success(`${loadedFiles.length} cluster file(s) loaded`);
-    } catch (err: any) {
-      setError(`Error loading cluster files: ${err.message}`);
+    } catch (err) {
+      const error = err as Error;
+      setError(`Error loading cluster files: ${error.message}`);
       toast.error('Failed to load cluster files');
     }
   };
 
-  const updateClusterConfig = (index: number, field: keyof ClusterFile, value: any) => {
+  const updateClusterConfig = (index: number, field: keyof ClusterFile, value: string) => {
     const updated = [...clusterFiles];
-    updated[index][field] = value as never;
+    (updated[index][field] as string) = value;
     setClusterFiles(updated);
   };
 
@@ -210,7 +212,7 @@ export default function ClusterMatcher() {
       cluster.columnsToAdd.forEach(col => {
         const counts: Record<string, number> = {};
         matchedData.forEach(row => {
-          const val = row[col];
+          const val = String(row[col] ?? 'Unknown');
           counts[val] = (counts[val] || 0) + 1;
         });
         columnSummaries[col] = counts;
@@ -248,7 +250,7 @@ export default function ClusterMatcher() {
       window.URL.revokeObjectURL(url);
       
       toast.success(`Downloaded: ${a.download}`);
-    } catch (err: any) {
+    } catch {
       toast.error(`Failed to download ${cluster.name}`);
     }
   };
@@ -263,7 +265,7 @@ export default function ClusterMatcher() {
           if (idx === processedClusters.length - 1) {
             toast.success(`All ${successCount} files downloaded successfully!`);
           }
-        } catch (err) {
+        } catch {
           toast.error(`Failed to download ${cluster.name}`);
         }
       }, idx * 300);
@@ -430,7 +432,7 @@ export default function ClusterMatcher() {
                               </div>
                             </div>
                             <p className="text-xs text-muted-foreground mt-2">
-                              Example: Match cluster's "nodeName" with topology's "SITENAME"
+                              Example: Match cluster&apos;s &quot;nodeName&quot; with topology&apos;s &quot;SITENAME&quot;
                             </p>
                           </AlertDescription>
                         </Alert>
