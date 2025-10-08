@@ -176,7 +176,7 @@ export default function ClusterMatcher() {
       ) || cluster.topologyMatchField;
       
       // Create lookup map for this cluster's match field
-      const lookupMap: Record<string, any> = {};
+      const lookupMap: Record<string, Record<string, unknown>> = {};
       topologyData.forEach(row => {
         const key = (row[topologyMatchField] || '').toString().trim().toLowerCase();
         if (key) {
